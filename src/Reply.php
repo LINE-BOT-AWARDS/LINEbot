@@ -24,7 +24,7 @@ if($type != "text"){
 //返信データ作成
 $response_format_text = [
   "type" => "text",
-  "text" => "hello japanese"
+  "text" => "hello"
   ];
 $post_data = [
   "replyToken" => $replyToken,
