@@ -12,7 +12,7 @@ curl -X POST \
         },
         {
             "type":"text",
-            "text":"いいいいい"
+            "text":"こんにちわ"
         }
     ]
 }' https://api.line.me/v2/bot/message/push
