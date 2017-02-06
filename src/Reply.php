@@ -1,5 +1,5 @@
 <?php
-$accessToken = 'V5echcjn1fRA5WXBLixP64bPatPoVUgDPrRnN+jfDO+MIJ2kBzvWc5WqeU9Fctvnlg0OhczFWlvEhUUrqComLtTBPBtocRnySqHdVj9qqx8tYFiEvrJRSBsQutU58w/Zrcczd/ZCIpceSpJVOhdU0AdB04t89/1O/w1cDnyilFU=';
+$accessToken = '<access Token>';
 
 $fp = fopen("sample.txt", "w");
 fwrite($fp, $json_string);
@@ -17,18 +17,25 @@ $replyToken = $jsonObj->{"events"}[0]->{"replyToken"};
 
 //メッセージ以外のときは何も返さず終了
 if($type != "text"){
-  exit;
+	exit;
 }
-
+$line = "";
 $fp = fopen("before.txt","r");
 while (!feof($fp)) {
   $line = fgets($fp);
 }
 fclose($fp);
 
+$setting_name="";
+$fp = fopen("setting.txt","r");
+while (!feof($fp)) {
+  $setting_name = fgets($fp);
+}
+fclose($fp);
+
 if ($line != ""){
    if ($line == "CD"){
-       $response_format_text = KickRakutenAPI("CD",$text);
+       $response_format_text = KickRakutenAPI("CD", $text);
    }elseif ($line == "DVD"){
        $response_format_text = KickRakutenAPI("DVD",$text);
    }elseif ($line == "TV"){
@@ -40,47 +47,68 @@ if ($line != ""){
    fclose($fp);
     
 }else{
+if(strstr($text,"設定")){
+   $tmp = ltrim($text,"設定");
+   $fp = fopen("setting.txt", "w");
+   fwrite($fp, $tmp);
+   fclose($fp);
+   $response_format_text = [
+	"type" => "text",
+	"text" => $tmp."を設定しました。"
+	];
 
-if($text == "CD"){
-$fp = fopen("before.txt", "w");
-fwrite($fp, "CD");
-fclose($fp);
-$response_format_text = [
-  "type" => "text",
-  "text" => "アーティストは？"
-  ];
+}elseif(strstr($text,"CD")){
+if ($setting_name != ""){
+    $response_format_text = KickRakutenAPI("CD",$setting_name);
 
-} elseif ($text == "DVD"){
+}else{
+    $fp = fopen("before.txt", "w");
+    fwrite($fp, "CD");
+    fclose($fp);
+   $response_format_text = [
+	"type" => "text",
+	"text" => "アーティストは？"
+	];
+    }
+} elseif (strstr($text,"DVD")){
+if ($setting_name != ""){
+    $response_format_text = KickRakutenAPI("DVD",$setting_name);
+}else{
 $fp = fopen("before.txt", "w");
 fwrite($fp, "DVD");
 fclose($fp);
 $response_format_text = [
-  "type" => "text",
-  "text" => "出演者は？"
-  ];
+	"type" => "text",
+	"text" => "出演者は？"
+	];
+}
 }elseif($text == "TV"){
+if ($setting_name != ""){
+    $response_format_text = getTV($setting_name);
+}else{
 $fp = fopen("before.txt", "w");
 fwrite($fp, "TV");
 fclose($fp);
 $response_format_text = [
-  "type" => "text",
-  "text" => "テレビ出演者は？"
-  ];
-}else{
+	"type" => "text",
+	"text" => "テレビ出演者は？"
+	];
+}
 
+}else{
 $reply_text = webnist($text);
 
 //返信データ作成
 $response_format_text = [
-  "type" => "text",
-  "text" => "$reply_text"
-  ];
+	"type" => "text",
+	"text" => "$reply_text"
+	];
 }
 }
 
 $post_data = [
-  "replyToken" => $replyToken,
-  "messages" => [$response_format_text]
+	"replyToken" => $replyToken,
+	"messages" => [$response_format_text]
 ];
 
 $ch = curl_init("https://api.line.me/v2/bot/message/reply");
@@ -97,11 +125,13 @@ curl_close($ch);
 
 function KickRakutenAPI($type,$text){
 $ch = curl_init(); // init
+$tmp = trim($text);
 if ($type == "CD"){
-    curl_setopt($ch, CURLOPT_URL, "https://app.rakuten.co.jp/services/api/BooksCD/Search/20130522?format=json&artistName=".$text."&booksGenreId=002&sort=-releaseDate&applicationId=1044766103436809187"); // URLをセット
+    curl_setopt($ch, CURLOPT_URL, "https://app.rakuten.co.jp/services/api/BooksCD/Search/20130522?format=json&artistName=".$tmp."&booksGenreId=002&sort=-releaseDate&applicationId=<application ID>"); // URLをセット
 } elseif ($type == "DVD"){
-    curl_setopt($ch, CURLOPT_URL, "https://app.rakuten.co.jp/services/api/BooksDVD/Search/20130522?format=json&artistName=".$text."&booksGenreId=003&sort=-releaseDate&applicationId=1044766103436809187"); // URLをセット
+    curl_setopt($ch, CURLOPT_URL, "https://app.rakuten.co.jp/services/api/BooksDVD/Search/20130522?format=json&artistName=".$tmp."&booksGenreId=003&sort=-releaseDate&applicationId=<application ID>"); // URLをセット
 } 
+
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true); // curl_exec()の結果を文字列で返す
 $c = curl_exec($ch); // 実行
 curl_close($ch); // おまじない
@@ -114,6 +144,7 @@ $caption1 =  mb_strimwidth($d["Items"][0]["Item"]["itemCaption"], 0, 50, "...");
 if( $caption1 == ""){
     $caption1 = "no message";
 }
+
 $thumb2 = str_replace("http","https",$d["Items"][1]["Item"]["mediumImageUrl"]);
 $title2 = mb_strimwidth($d["Items"][1]["Item"]["title"], 0, 35, "..."); 
 $caption2 =  mb_strimwidth($d["Items"][1]["Item"]["itemCaption"], 0, 50, "..."); 
@@ -138,6 +169,7 @@ $caption5 =  mb_strimwidth($d["Items"][4]["Item"]["itemCaption"], 0, 50, "...");
 if( $caption5 == ""){
     $caption5 = "no message";
 }
+
 
 //返信データ作成
   $response_format_text = [
@@ -266,7 +298,7 @@ return $response_format_text;
 
 function webnist($text) {
   $context_file = dirname(__FILE__).'/.docomoapi.context';
-  $api_key = '537378555754626667475874424c7a4239304f44615646364a497959633669725675424656727a464b6631';
+  $api_key = '<api key>';
   $api_url = sprintf('https://api.apigw.smt.docomo.ne.jp/dialogue/v1/dialogue?APIKEY=%s', $api_key);
   $req_body = array('utt' => $text);
   if ( file_exists($context_file) ) {
@@ -292,7 +324,8 @@ function webnist($text) {
 
 function getTV($text){
     //対象URL取得
-    $geturl = "http://tv.so-net.ne.jp/schedulesBySearch.action?stationPlatformId=0&condition.keyword=".$text."&submit=%E6%A4%9C%E7%B4%A2";
+    $tmp = trim($text);
+    $geturl = "http://tv.so-net.ne.jp/schedulesBySearch.action?stationPlatformId=0&condition.keyword=".$tmp."&submit=%E6%A4%9C%E7%B4%A2";
     $channel = [];
     $content = [];
 
